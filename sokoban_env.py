@@ -1,17 +1,22 @@
 # @author Jonathan Sekela
 
+# @todo: make this more sokoban-like...? library of obj types, colors, room colors, want to be able to give it a grammar for "go to purple chair", "go to green room", "move orange backpack to blue room", etc.
+#	this will play heavily into observation vars and state representation.
+#	look into json files that describe some of this.
+# you've got till September 29 (maybe october, maybe September 11, we dont know rn) (D:)
+
 from typing import Optional
 import numpy as np
 import gymnasium as gym
 
 """
 make it a 2d array of ints. put wall around all edges.
-0: w = wall
-1: g = green floor
-2: b = blue floor
-3: p = purple floor
-4: b = black floor
-5: o = orange floor
+0 = wall
+1 = green floor
+2 = blue floor
+3 = purple floor
+4 = black floor
+5 = orange floor
 """
 
 class SokobanEnv(gym.Env):
@@ -56,10 +61,10 @@ class SokobanEnv(gym.Env):
 		# Map action numbers to actual movements on the grid
 		# This makes the code more readable than using raw numbers
 		self._action_to_direction = {
-			0: np.array([1, 0]),   # Move right (positive x)
-			1: np.array([0, 1]),   # Move up (positive y)
-			2: np.array([-1, 0]),  # Move left (negative x)
-			3: np.array([0, -1]),  # Move down (negative y)
+			0: np.array([1, 0]),   # Move down (positive array row)
+			1: np.array([0, 1]),   # Move right (positive array column)
+			2: np.array([-1, 0]),  # Move up (negative array row)
+			3: np.array([0, -1]),  # Move left (negative array column)
 		}
 # endregion
 
@@ -106,11 +111,12 @@ class SokobanEnv(gym.Env):
 		# np.clip prevents the agent from walking off the edge
 		if not self.__is_wall(self.agent_loc, direction):
 			# if agent moves into chair, check that chair won't move into wall then move both in direction
-			if np.array_equal(self.agent_loc + direction, self.target_loc) and not self.__is_wall(self.target_loc, direction):
-				self.agent_loc = np.clip(self.agent_loc + direction, 0, self.size - 1)
-				self.target_loc = np.clip(self.target_loc + direction, 0, self.size - 1)
-			# if not a wall space, move agent in direction
+			if np.array_equal(self.agent_loc + direction, self.target_loc):
+				if not self.__is_wall(self.target_loc, direction):
+					self.agent_loc = np.clip(self.agent_loc + direction, 0, self.size - 1)
+					self.target_loc = np.clip(self.target_loc + direction, 0, self.size - 1)
 			else:
+				# if not a wall or target space, move agent in direction
 				self.agent_loc = np.clip(self.agent_loc + direction, 0, self.size - 1)
 
 		# Check if agent reached the target
@@ -143,7 +149,7 @@ class SokobanEnv(gym.Env):
 	Returns:
 		dict: Info with distance between agent and target
 	"""
-	# @todo: reimplement
+	# @todo: reimplement. get_info is currently useless.
 	def _get_info(self):
 		return {
 			"distance": np.linalg.norm(

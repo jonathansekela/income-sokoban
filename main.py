@@ -1,8 +1,6 @@
 # @author Jonathan Sekela
 
-# @todo: run gymnasium stable baselines. gym just gives you pre-made agents and they work. find them here: https://stable-baselines.readthedocs.io/en/master/
-# setup eval pipeline for each agent in main. env is deterministic. cumulative reward over an episode. train for a number of episodes, freeze policy, test on that policy for a number of episodes, average cumulative reward over all episodes, plot that point, repeat.
-# stable baseliens might handel that for you :D
+# @todo: setup eval pipeline for each agent in main. env is deterministic. cumulative reward over an episode. train for a number of episodes, freeze policy, test on that policy for a number of episodes, average cumulative reward over all episodes, plot that point, repeat.
 # keep in mind the policy is an object, so when you test the network you're just querying the policy object.
 
 # general packages
@@ -16,7 +14,7 @@ import agent
 env = sokoban_env.SokobanEnv()
 
 model = A2C("MultiInputPolicy", env, verbose=1, device='cuda')
-model.learn(total_timesteps=2500)
+model.learn(total_timesteps=3000)
 model.save("a2c_sokoban")
 
 del model # remove to demonstrate saving and loading
