@@ -5,15 +5,13 @@ import numpy as np
 import gymnasium as gym
 
 """
-make it a 2d array of chars. put wall around all edges.
-g = green floor
-b = blue floor
-p = purple floor
-b = black floor
-o = orange floor
-w = wall
-a = agent
-c = chair
+make it a 2d array of ints. put wall around all edges.
+0: w = wall
+1: g = green floor
+2: b = blue floor
+3: p = purple floor
+4: b = black floor
+5: o = orange floor
 """
 
 class SokobanEnv(gym.Env):
@@ -22,18 +20,19 @@ class SokobanEnv(gym.Env):
 
 	# @todo: reimplement given new location and movement stuff
 	def __init__(self, max_actions: int = 100, size: int = 10):
+		super().__init__()
 		# currently a 10x10 board. green room north, black room south, 2-space way between. surrounded by walls.
 		self.size = size
-		self.board = np.array([	['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w'],
-								['w', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'w'],
-								['w', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'w'],
-								['w', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'w'],
-								['w', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'w'],
-								['w', 'w', 'w', 'w', 'b', 'b', 'w', 'w', 'w', 'w'],
-								['w', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'w'],
-								['w', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'w'],
-								['w', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'b', 'w'],
-								['w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w', 'w']])
+		self.board = np.array([	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+								[0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+								[0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+								[0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+								[0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+								[0, 0, 0, 0, 2, 2, 0, 0, 0, 0],
+								[0, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+								[0, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+								[0, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+								[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
 		
 		self.agent_loc = np.array([1, 1]) # x, y coordinate
 		self.target_loc = np.array([7, 7]) # x, y coordinate
@@ -43,6 +42,16 @@ class SokobanEnv(gym.Env):
 
 		# Define what actions are available (4 directions)
 		self.action_space = gym.spaces.Discrete(4)
+
+		# Define what the agent can observe
+		# Dict space gives us structured, human-readable observations
+		self.observation_space = gym.spaces.Dict(
+			{
+				"agent": gym.spaces.Box(-1, 1, shape=(2,), dtype=int),   # [x, y] coordinates
+				"target": gym.spaces.Box(-1, 1, shape=(2,), dtype=int),  # [x, y] coordinates
+				"board": gym.spaces.Box(0, 5, shape=(size, size), dtype=int) # the board: 2d array size x size
+			}
+		)
 
 		# Map action numbers to actual movements on the grid
 		# This makes the code more readable than using raw numbers
@@ -57,18 +66,16 @@ class SokobanEnv(gym.Env):
 # region public methods
 
 	## Start a new episode.
-	## Args:
 	## 	seed: Random seed for reproducible episodes
 	## 	options: Additional configuration (unused in this example)
-	## Returns:
-	## 	tuple: (observation, info) for the initial state
-	# @todo: reimplement
+	## Returns tuple: (observation, info) for the initial state
 	def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
 		# IMPORTANT: Must call this first to seed the random number generator
 		super().reset(seed=seed)
+		self.actions_taken = 0
 
 		# @todo: randomly place the agent anywhere on the grid
-		self.agent_loc = np.array([2, 2])
+		self.agent_loc = np.array([1, 1])
 		# self.agent_loc = self.np_random.integers(0, self.size, size=2, dtype=int)
 
 		# @todo: randomly place target, ensuring it's different from agent position
@@ -89,12 +96,11 @@ class SokobanEnv(gym.Env):
 	## 	action: The action to take (0-3 for directions)
 	## Returns:
 	## 	tuple: (observation, reward, terminated, truncated, info)
-	# @todo: reimplement
 	def step(self, action):
 
 		self.actions_taken += 1
 		# Map the discrete action (0-3) to a movement direction
-		direction = self._action_to_direction[action]
+		direction = self._action_to_direction[action.item()] # @todo: when model doesn't use numpy.int64, change this back to just action
 
 		# Update agent position, ensuring it stays within grid bounds
 		# np.clip prevents the agent from walking off the edge
@@ -149,10 +155,10 @@ class SokobanEnv(gym.Env):
 
 	def __is_wall(self, location, direction):
 		test = location + direction
-		return self.board[test[0]][test[1]] == 'w'
+		return self.board[test[0]][test[1]] == 0
 	
 	# goal reached if target is in green room
 	def __goal_reached(self):
-		return self.board[self.target_loc[0]][self.target_loc[1]] == 'g'
+		return self.board[self.target_loc[0]][self.target_loc[1]] == 1
 # endregion
 # endregion
