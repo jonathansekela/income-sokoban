@@ -11,7 +11,7 @@ from stable_baselines3 import A2C
 import sokoban_env
 import agent
 
-env = sokoban_env.SokobanEnv()
+env = sokoban_env.SokobanEnv(max_actions = 200)
 
 model = A2C("MultiInputPolicy", env, verbose=1, device='cuda')
 model.learn(total_timesteps=3000)
@@ -22,6 +22,8 @@ del model # remove to demonstrate saving and loading
 model = A2C.load("a2c_sokoban")
 
 # run a set number of episodes
+terminated_eps = 0
+truncated_eps = 0
 for episode in range(100):
 	observation, info = env.reset()
 	terminated = False
@@ -38,7 +40,11 @@ for episode in range(100):
 
 		# If the episode has ended then we can reset to start a new episode
 		if terminated or truncated:
+			if terminated:
+				terminated_eps += 1
+			else:
+				truncated_eps += 1
 			print("%s: %s" % (episode + 1, 'TERMINATED' if terminated else 'TRUNCATED'))
 			observation, info = env.reset()
-
+print("terminated total: %s | truncated total: %s" % (terminated_eps, truncated_eps))
 env.close()
